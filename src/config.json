@@ -1,0 +1,9 @@
+{
+  "Server": {
+    "port": "3000",
+    "description": ""
+  },
+  "admin-users": [
+    "none"
+  ]
+}

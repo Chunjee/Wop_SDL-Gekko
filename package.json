@@ -1,0 +1,16 @@
+{
+  "name": "sdl-gekko",
+  "version": "0.0.1",
+  "description": "",
+  "main": "./src/app.js",
+  "dependencies": {
+    "express": "^4.13.3",
+    "jade": "^1.11.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Chunjee",
+  "license": "MIT"
+}
