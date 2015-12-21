@@ -5,7 +5,9 @@
   "main": "./src/app.js",
   "dependencies": {
     "express": "^4.13.3",
-    "jade": "^1.11.0"
+    "jQuery": "^1.7.4",
+    "jade": "^1.11.0",
+    "request": "^2.67.0"
   },
   "devDependencies": {},
   "scripts": {

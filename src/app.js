@@ -11,6 +11,9 @@
 
 
 //Dependencies
+	//request
+var request = require('request');
+	//Express
 var express = require('express'),
 	fs = require("fs"),
 	posts = require('./sample_data/posts.json');
@@ -35,18 +38,47 @@ app.set('views', __dirname + '/templates')
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 console.log("Started on " + Date())
 
+
+
 setInterval(checkSDL, 1000*60*5) //re-index the SGR every 5 mins
 
 
 //~~~~~~~~~~~~~~~~~~~~~
 // Routes
 //~~~~~~~~~~~~~~~~~~~~~
+
+//ROOT
 app.get('/', function(req, res){
 	//grab the path the user is traveling to
 	var path = req.path;
 	//asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
 	res.locals.path = path;
 	res.render('index')
+});
+
+
+//AMT_Status
+app.get('/amt_status', function(req, res){
+	
+	//start checking all AMTs for todays date
+	var amt_array = ["tvgvpramt01","tvgvpramt02","tvgvpramt03","tvgvpramt04","tvgvpramt05","tvgvpramt06"]
+
+	for (var i = amt_array.length - 1; i >= 0; i--) {
+		request('http://' + amt_array[i] +':80/TSG/api/session/date', function (error, response, body) {
+		  if (!error && response.statusCode == 200) {
+		  	//parse the response
+		  	var body_obj = JSON.parse(body)
+		    console.log(body_obj.response);
+
+
+		    //re-render
+		    //asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
+		    //res.render('amt_status');
+		  }
+		});
+	};
+	//default render
+	res.render('amt_status');
 });
 
 app.get('/blog/:title?', function(req, res){ 
