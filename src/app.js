@@ -7,21 +7,34 @@
 //~~~~~~~~~~~~~~~~~~~~~
 //Compile Options
 //~~~~~~~~~~~~~~~~~~~~~
-'use strict';
+"use strict";
 
 
 //Dependencies
+	//jquery
+var jsdom = require('jsdom');
+jsdom.env(
+  "https://iojs.org/dist/",
+  ["http://code.jquery.com/jquery.js"],
+  function (err, window) {
+    //console.log("there have been", window.$("a").length - 4, "io.js releases!");
+    //var $ = window.$;
+  }
+);
+//var $ = require('jquery');
+
 	//request
 var request = require('request');
 	//Express
-var express = require('express'),
-	fs = require("fs"),
+var express = require('express');
+var	fs = require("fs"),
 	posts = require('./sample_data/posts.json');
 
-	var postsLists = Object.keys(posts).map(function(value) {
-		return posts[value]
+	//map the keys to "key" and return each of those to values to postsLists
+	var postsList = Object.keys(posts).map(function(key) {
+		return posts[key]
 	});
-	
+	console.log(postsList);
 //assign express
 var app = express();
 app.use("/static", express.static(__dirname + "/public"))
@@ -36,11 +49,11 @@ app.set('views', __dirname + '/templates')
 ///--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 // PREP AND STARTUP
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
-console.log("Started on " + Date())
+console.log("Started on " + Date());
 
 
 
-setInterval(checkSDL, 1000*60*5) //re-index the SGR every 5 mins
+setInterval(checkSDL, 1000*60*5); //re-index the SGR every 5 mins
 
 
 //~~~~~~~~~~~~~~~~~~~~~
@@ -61,33 +74,38 @@ app.get('/', function(req, res){
 app.get('/amt_status', function(req, res){
 	
 	//start checking all AMTs for todays date
-	var amt_array = ["tvgvpramt01","tvgvpramt02","tvgvpramt03","tvgvpramt04","tvgvpramt05","tvgvpramt06"]
-
 	for (var i = amt_array.length - 1; i >= 0; i--) {
 		request('http://' + amt_array[i] +':80/TSG/api/session/date', function (error, response, body) {
 		  if (!error && response.statusCode == 200) {
 		  	//parse the response
 		  	var body_obj = JSON.parse(body)
 		    console.log(body_obj.response);
-
-
+		    amtresult_array += body_obj.response + "/n"
 		    //re-render
+		    res.locals.statuses = amtresult_array;
+		    done = true
 		    //asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
 		    //res.render('amt_status');
 		  }
 		});
 	};
-	//default render
+	//render after reciving response from all
+	while (done === false) {
+		res.render('amt_status');
+	}
+	//res.locals.statuses = amtresult_array;
 	res.render('amt_status');
+	res.end();
 });
 
 app.get('/blog/:title?', function(req, res){ 
 	var title = req.params.title;
 	console.log("someone wants to access:" + title)
+
 	if (title === undefined) {
 		res.status(503);
-		res.render("blog", { post: post});
-		//res.send("This page is under construction!");
+		res.render("blog", { posts: postsList});
+		//res.send("This page is under construction! (actually no its done)");
 	} else {
 		var post = posts[title] || {}; //asign post to the post.%title% or an empty object if it does not exist.
 		res.render("post", { post: post});
@@ -125,7 +143,9 @@ function checkSDL() {
 }
 
 
-
+function checkAMTsDate() {
+	var amt_array = ["tvgvpramt01","tvgvpramt02","tvgvpramt03","tvgvpramt04","tvgvpramt05","tvgvpramt06"]
+}
 
 //SDL_CLASS
 function SDL_class(para_SystemName,para_Location) {

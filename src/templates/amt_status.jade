@@ -1,10 +1,14 @@
 extends ./layout.jade
 
 block content
+        script(type='text/javascript').
+          if (foo) {
+             bar(1 + 5)
+          }
         header
           .header-content
             .header-content-inner
               p
-                | Checking all AMTs...
+                | Checking all AMTs... #{statuses}
               |    
               a.btn.btn-primary.btn-xl(href='amt_status') Check Again
