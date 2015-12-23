@@ -23,6 +23,9 @@ jsdom.env(
 );
 //var $ = require('jquery');
 
+
+	//Promises
+var qPromise = require('q');
 	//request
 var request = require('request');
 	//Express
@@ -34,7 +37,6 @@ var	fs = require("fs"),
 	var postsList = Object.keys(posts).map(function(key) {
 		return posts[key]
 	});
-	console.log(postsList);
 //assign express
 var app = express();
 app.use("/static", express.static(__dirname + "/public"))
@@ -70,6 +72,8 @@ app.get('/', function(req, res){
 });
 
 
+
+
 //AMT_Status
 app.get('/amt_status', function(req, res){
 	
@@ -90,9 +94,7 @@ app.get('/amt_status', function(req, res){
 		});
 	};
 	//render after reciving response from all
-	while (done === false) {
-		res.render('amt_status');
-	}
+	res.render('amt_status');
 	//res.locals.statuses = amtresult_array;
 	res.render('amt_status');
 	res.end();
@@ -110,6 +112,58 @@ app.get('/blog/:title?', function(req, res){
 		var post = posts[title] || {}; //asign post to the post.%title% or an empty object if it does not exist.
 		res.render("post", { post: post});
 	}
+});
+
+var	amt_array = [
+		{
+		"name": "tvgvpramt01",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt02",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt03",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt04",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt05",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt06",
+		"date": ""
+		}
+	];
+
+
+//All API Endpoints
+app.get('/api/:endpoint?', function(req, res){
+	//grab the endpoint
+	var endpoint = req.params.endpoint;
+	//log
+	console.log("API Request: " + endpoint);
+	if (endpoint === undefined) {
+		res.status(503);
+		res.send("documentation under construction");
+		return
+	} else {
+		if (endpoint === "amtstatus") {
+			var alf = Fn_checkAMTsDate(amt_array);
+			res.send(alf);
+			return
+		}
+	}
+
+
+	//user requested an endpoint that is not defined here
+	res.send("that endpoint does not exist");
+	//res.end();
 });
 
 //~~~~~~~~~~~~~~~~~~~~~
@@ -132,8 +186,6 @@ var AmToteSDL = new SDL_class("alf", "location");
 
 
 
-
-
 //--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 // Function Staging
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
@@ -142,9 +194,77 @@ function checkSDL() {
 	//Loop all known SDLs and start re-reading the file
 }
 
+function Fn_checkAMTsDate(para_serversarray) {
+	var promises_array = para_serversarray.map(getAMTDate);
+	return qPromise.all(promises_array);
+}
 
-function checkAMTsDate() {
-	var amt_array = ["tvgvpramt01","tvgvpramt02","tvgvpramt03","tvgvpramt04","tvgvpramt05","tvgvpramt06"]
+function getAMTDate(para_Sever) {
+	request('http://' + para_Sever["name"] +':80/TSG/api/session/date', function (error, response, body) {
+		if (!error && response.statusCode == 200) {
+			//parse the response
+			var body_obj = JSON.parse(body);
+			console.log(body_obj.response + " " + para_Sever["name"]);
+			return body_obj.response
+			// = body_obj.response //<<<<------ This doesn't work because no access to i inside the callback function?
+		} else {
+			//there was no reply
+		}
+	});
+}
+
+
+
+
+
+
+
+function Fn_checkAMTsDateOLD() {
+	//var amt_array = ["tvgvpramt01","tvgvpramt02","tvgvpramt03","tvgvpramt04","tvgvpramt05","tvgvpramt06"]
+
+	var	amt_array = [
+		{
+		"name": "tvgvpramt01",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt02",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt03",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt04",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt05",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt06",
+		"date": ""
+		}
+	];
+	
+	//check the date on each sever
+	for (var i = amt_array.length - 1; i >= 0; i--) {
+		request('http://' + amt_array[i]["name"] +':80/TSG/api/session/date', amt_array[i]["date"] = function (error, response, body) {
+			  if (!error && response.statusCode == 200) {
+				//parse the response
+				var body_obj = JSON.parse(body);
+				console.log(body_obj.response);
+				return body_obj.response
+				// = body_obj.response //<<<<------ This doesn't work because no access to i inside the callback function?
+			} else {
+				//there was no reply
+			}
+		});
+	}
+
+	//fails as callback has not returned with answer yet
 }
 
 //SDL_CLASS
