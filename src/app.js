@@ -25,7 +25,7 @@ jsdom.env(
 
 
 	//Promises
-var qPromise = require('q');
+var Promise = require('bluebird');
 	//request
 var request = require('request');
 	//Express
@@ -39,80 +39,19 @@ var	fs = require("fs"),
 	});
 //assign express
 var app = express();
-app.use("/static", express.static(__dirname + "/public"))
+app.use("/static", express.static(__dirname + "/public"));
 
 
 
 //Set Template Engine
 app.set('view engine', 'jade');
-app.set('views', __dirname + '/templates')
+app.set('views', __dirname + '/templates');
 
 
 ///--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 // PREP AND STARTUP
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 console.log("Started on " + Date());
-
-
-
-setInterval(checkSDL, 1000*60*5); //re-index the SGR every 5 mins
-
-
-//~~~~~~~~~~~~~~~~~~~~~
-// Routes
-//~~~~~~~~~~~~~~~~~~~~~
-
-//ROOT
-app.get('/', function(req, res){
-	//grab the path the user is traveling to
-	var path = req.path;
-	//asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
-	res.locals.path = path;
-	res.render('index')
-});
-
-
-
-
-//AMT_Status
-app.get('/amt_status', function(req, res){
-	
-	//start checking all AMTs for todays date
-	for (var i = amt_array.length - 1; i >= 0; i--) {
-		request('http://' + amt_array[i] +':80/TSG/api/session/date', function (error, response, body) {
-		  if (!error && response.statusCode == 200) {
-		  	//parse the response
-		  	var body_obj = JSON.parse(body)
-		    console.log(body_obj.response);
-		    amtresult_array += body_obj.response + "/n"
-		    //re-render
-		    res.locals.statuses = amtresult_array;
-		    done = true
-		    //asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
-		    //res.render('amt_status');
-		  }
-		});
-	};
-	//render after reciving response from all
-	res.render('amt_status');
-	//res.locals.statuses = amtresult_array;
-	res.render('amt_status');
-	res.end();
-});
-
-app.get('/blog/:title?', function(req, res){ 
-	var title = req.params.title;
-	console.log("someone wants to access:" + title)
-
-	if (title === undefined) {
-		res.status(503);
-		res.render("blog", { posts: postsList});
-		//res.send("This page is under construction! (actually no its done)");
-	} else {
-		var post = posts[title] || {}; //asign post to the post.%title% or an empty object if it does not exist.
-		res.render("post", { post: post});
-	}
-});
 
 var	amt_array = [
 		{
@@ -141,12 +80,71 @@ var	amt_array = [
 		}
 	];
 
+setInterval(checkSDL, 1000*60*5); //re-index the SGR every 5 mins
+
+
+//~~~~~~~~~~~~~~~~~~~~~
+// Routes
+//~~~~~~~~~~~~~~~~~~~~~
+
+//ROOT
+app.get('/', function(req, res){
+	//grab the path the user is traveling to
+	var path = req.path;
+	//asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
+	res.locals.path = path;
+	res.render('index')
+});
+
+
+
+
+//AMT_Status
+app.get('/amt_status', function(req, res){
+	
+	//start checking all AMTs for todays date
+	for (var i = amt_array.length - 1; i >= 0; i--) {
+		request('api/amtstatus', function (error, response, body) {
+		  if (!error && response.statusCode == 200) {
+		  	//parse the response
+		  	var body_obj = JSON.parse(body)
+		    console.log(body_obj);
+		    //re-render
+		    res.locals.statuses = body_obj;
+		    //asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
+		    res.render('amt_status');
+		    return;
+		  }
+		});
+	};
+	//render after reciving response from all
+	res.render('amt_status');
+	//res.locals.statuses = amtresult_array;
+	res.end();
+});
+
+
+
+app.get('/blog/:title?', function(req, res){ 
+	var title = req.params.title;
+	console.log("someone wants to access:" + title)
+
+	if (title === undefined) {
+		res.status(503);
+		res.render("blog", { posts: postsList});
+		//res.send("This page is under construction! (actually no its done)");
+	} else {
+		var post = posts[title] || {}; //asign post to the post.%title% or an empty object if it does not exist.
+		res.render("post", { post: post});
+	}
+});
+
 
 //All API Endpoints
 app.get('/api/:endpoint?', function(req, res){
 	//grab the endpoint
 	var endpoint = req.params.endpoint;
-	//log
+	//log the request
 	console.log("API Request: " + endpoint);
 	if (endpoint === undefined) {
 		res.status(503);
@@ -154,12 +152,23 @@ app.get('/api/:endpoint?', function(req, res){
 		return
 	} else {
 		if (endpoint === "amtstatus") {
-			var alf = Fn_checkAMTsDate(amt_array);
-			res.send(alf);
+			var promise_array = amt_array.map(function (amt) {
+			    return getAMTDate(amt);
+			});
+
+			Promise.all(promise_array)
+			.then( function(resolved_array) {
+			    resolved_array.forEach(function (response, idx) {
+			        console.log(response.name + ": " + response.date);
+				});
+				amt_array = resolved_array;
+				res.send(amt_array);
+			}).catch(function (err) {    
+			    console.error('Something went wrong: '+err);
+			});
 			return
 		}
 	}
-
 
 	//user requested an endpoint that is not defined here
 	res.send("that endpoint does not exist");
@@ -171,9 +180,8 @@ app.get('/api/:endpoint?', function(req, res){
 //~~~~~~~~~~~~~~~~~~~~~
 
 app.listen(3000, function() {
-	console.log("The frontend server is running on port 3000!");
+	console.log("The frontend server is running on port 3000");
 });
-
 
 //--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 // MAIN
@@ -181,8 +189,6 @@ app.listen(3000, function() {
 
 var AmToteSDL = new SDL_class("alf", "location");
 //AmToteSDL.pull_file();
-
-
 
 
 
@@ -200,17 +206,26 @@ function Fn_checkAMTsDate(para_serversarray) {
 }
 
 function getAMTDate(para_Sever) {
-	request('http://' + para_Sever["name"] +':80/TSG/api/session/date', function (error, response, body) {
-		if (!error && response.statusCode == 200) {
-			//parse the response
-			var body_obj = JSON.parse(body);
-			console.log(body_obj.response + " " + para_Sever["name"]);
-			return body_obj.response
-			// = body_obj.response //<<<<------ This doesn't work because no access to i inside the callback function?
-		} else {
-			//there was no reply
-		}
-	});
+//para_Server is an object
+    return new Promise(function (resolve, reject) {
+	   request('http://' + para_Sever["name"] + ':80/TSG/api/session/date', function (error, response, body) {
+           // pretend it works. Remove the three lines below in real life....
+           error = false;
+           response = { statusCode : 200 };
+           
+            if (!error && response.statusCode === 200) {
+                //parse the response and assign it to the resolved return
+                var body_obj = JSON.parse(body);
+                resolve({
+                    name: para_Sever.name,
+                    date: body_obj.response
+                });
+            } else {
+                //there was no reply
+                reject(error || response.statusCode);
+            }
+	   });
+    });
 }
 
 
@@ -272,7 +287,7 @@ function SDL_class(para_SystemName,para_Location) {
 this.name = para_SystemName;
 this.location = para_Location;
 
-console.log("New SDL created with " + this.name + " at: " + this.location);
+//console.log("New SDL created with " + this.name + " at: " + this.location);
 }
 
 SDL_class.prototype.pull_file = function () {
