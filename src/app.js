@@ -96,8 +96,11 @@ app.get('/', function(req, res){
 	res.render('index')
 });
 
-
-
+//AMT_Status
+app.get('/tools_page', function(req, res){
+	//just render
+	res.render('tools_page');
+});
 
 //AMT_Status
 app.get('/amt_status', function(req, res){
@@ -108,10 +111,9 @@ app.get('/amt_status', function(req, res){
 		  if (!error && response.statusCode == 200) {
 		  	//parse the response
 		  	var body_obj = JSON.parse(body)
-		    console.log(body_obj);
-		    //re-render
-		    res.locals.statuses = body_obj;
+		    
 		    //asign path to res so it can be accessed outside the function //NOTE: res.locals are available to the rendering engine
+		    res.locals.statuses = body_obj;
 		    res.render('amt_status');
 		    return;
 		  }
