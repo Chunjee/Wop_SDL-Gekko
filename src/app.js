@@ -154,15 +154,18 @@ app.get('/api/:endpoint?', function(req, res){
 		return
 	} else {
 		if (endpoint === "amtstatus") {
+			//create an array of promises that perform the selected function for each AMT server
 			var promise_array = amt_array.map(function (amt) {
 			    return getAMTDate(amt);
 			});
-
+			//execute the entire array of promises, then return the object
 			Promise.all(promise_array)
 			.then( function(resolved_array) {
-			    resolved_array.forEach(function (response, idx) {
-			        console.log(response.name + ": " + response.date);
+				//log to console for each item
+				resolved_array.forEach(function (response, idx) {
+			        	console.log(response.name + ": " + response.date);
 				});
+				//can return amt_array or resolved_array
 				amt_array = resolved_array;
 				res.send(amt_array);
 			}).catch(function (err) {    
