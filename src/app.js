@@ -5,7 +5,7 @@
 //
 
 //~~~~~~~~~~~~~~~~~~~~~
-//Compile Options
+//RunTime Options
 //~~~~~~~~~~~~~~~~~~~~~
 "use strict";
 
@@ -79,7 +79,7 @@ var	amt_array = [
 		"date": ""
 		}
 	];
-
+var alltracks = "";
 setInterval(checkSDL, 1000*60*5); //re-index the SGR every 5 mins
 
 
@@ -125,6 +125,12 @@ app.get('/amt_status', function(req, res){
 	res.end();
 });
 
+//AMT_Status
+app.get('/tracklist_page', function(req, res){
+	res.render('tracklist_page');
+	//res.locals.statuses = amtresult_array;
+	res.end();
+});
 
 
 app.get('/blog/:title?', function(req, res){ 
@@ -142,6 +148,9 @@ app.get('/blog/:title?', function(req, res){
 });
 
 
+
+
+
 //All API Endpoints
 app.get('/api/:endpoint?', function(req, res){
 	//grab the endpoint
@@ -153,20 +162,42 @@ app.get('/api/:endpoint?', function(req, res){
 		res.send("documentation under construction");
 		return
 	} else {
+		//AMT Status
 		if (endpoint === "amtstatus") {
 			var promise_array = amt_array.map(function (amt) {
-			    return getAMTDate(amt);
+				return getAMTDate(amt);
 			});
 
 			Promise.all(promise_array)
 			.then( function(resolved_array) {
-			    resolved_array.forEach(function (response, idx) {
-			        console.log(response.name + ": " + response.date);
+				resolved_array.forEach(function (response, idx) {
+					console.log(response.name + ": " + response.date);
 				});
 				amt_array = resolved_array;
 				res.send(amt_array);
-			}).catch(function (err) {    
-			    console.error('Something went wrong: '+err);
+			}).catch(function (err) {
+			    console.error('Something went wrong: ' + err);
+			});
+			return
+		}
+
+		//Tracks
+		if (endpoint === "tracks") {
+			var blank_array = [
+				{
+				"name": "this array is blank",
+				}
+			]
+			var tracks_promise = blank_array.map(function (amt) {
+				return getTracks();
+			});
+
+
+			Promise.all(tracks_promise)
+			.then( function(resolved_var) {
+				res.send(resolved_var);
+			}).catch(function (err) {
+				console.error('Something went wrong: ' + err);
 			});
 			return
 		}
@@ -230,6 +261,27 @@ function getAMTDate(para_Sever) {
     });
 }
 
+function getTracks() {
+//para_Server is an object
+    return new Promise(function (resolve, reject) {
+	   request('http://tvgvpramt01/TSG/api/session', function (error, response, body) {
+           // pretend it always works
+           error = false;
+           response = { statusCode : 200 };
+           console.log(response);
+
+            if (!error && response.statusCode === 200) {
+                //save the response to our global var and resolve the promise
+                var body_obj = JSON.parse(body);
+                alltracks = body;
+                resolve(body_obj);
+            } else {
+                //there was no reply
+                reject(error || response.statusCode);
+            }
+	   });
+    });
+}
 
 
 
