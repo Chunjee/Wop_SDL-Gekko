@@ -1,15 +1,29 @@
 console.log("Tracklist javascript loaded");
 
+//hide div
+//$("#tracks").hide();
+
+
 //send AJAX request
 $.get("/api/tracks", "", function(data) {
 	//on success, parse and display result
 	console.log(data["0"])
 
-	//create a var of today as a number string
-	var day = new Date();
-	day = day.getDate();
-	day = day.toString();
+	var TrackList = $('ul.tracks_unorderedlist')
 
+	for (var i = 0; i < data["0"].response.cards.length; i++) {
+		//For each Track
+		var li = $('<li/>')
+        .addClass('ui-menu-item')
+        .attr('role', 'menuitem')
+        .appendTo(TrackList);
+    var aaa = $('<a/>')
+        .addClass('ui-all')
+        .text(data["0"].response.cards[i]["traCode"] + " | MTP: " + data["0"].response.cards[i]["minutesToPost"])
+        .appendTo(li);
+	};
+
+	/*
 	var html = "";
 	if (data.length != 0) {
 		for (var i = 0; i < data["0"].response.cards.length; i++) {
@@ -21,11 +35,14 @@ $.get("/api/tracks", "", function(data) {
 		};
 	html += "<br>";
 	}
+	*/
+
 	
 
 	//replace html and update display
-	$("#tracks").hide();
-	$("#tracks").html(html);
-	$("#tracks").slideDown("slow");
-	$("#checkagainbutton").text("Check Again")
+	//$("#tracks").hide();
+	//$("#tracks").slideDown("slow");
+
+
+	$("a.btn").text("Refresh")
 });

@@ -96,7 +96,7 @@ app.get('/', function(req, res){
 	res.render('index')
 });
 
-//AMT_Status
+//Tools_page
 app.get('/tools_page', function(req, res){
 	//just render
 	res.render('tools_page');
@@ -125,11 +125,12 @@ app.get('/amt_status', function(req, res){
 	res.end();
 });
 
-//AMT_Status
+//Tracklist
 app.get('/tracklist_page', function(req, res){
 	res.render('tracklist_page');
 	//res.locals.statuses = amtresult_array;
-	res.end();
+	//res.end();
+	return
 });
 
 
