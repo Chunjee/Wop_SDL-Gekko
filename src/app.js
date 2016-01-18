@@ -133,6 +133,18 @@ app.get('/tracklist_page', function(req, res){
 	return
 });
 
+//Status Page
+app.get('/status_page', function(req, res){
+	res.render('status_page');
+	return
+});
+
+//SDL Page
+app.get('/sdl_page', function(req, res){
+	res.render('sdl_page');
+	return
+});
+
 
 app.get('/blog/:title?', function(req, res){ 
 	var title = req.params.title;
@@ -172,7 +184,7 @@ app.get('/api/:endpoint?', function(req, res){
 			Promise.all(promise_array)
 			.then( function(resolved_array) {
 				resolved_array.forEach(function (response, idx) {
-					console.log(response.name + ": " + response.date);
+					//console.log(response.name + ": " + response.date);
 				});
 				amt_array = resolved_array;
 				res.send(amt_array);
@@ -269,7 +281,7 @@ function getTracks() {
            // pretend it always works
            error = false;
            response = { statusCode : 200 };
-           console.log(response);
+           //console.log(response);
 
             if (!error && response.statusCode === 200) {
                 //save the response to our global var and resolve the promise
