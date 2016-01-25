@@ -57,6 +57,8 @@ app.set('views', __dirname + '/templates');
 // PREP AND STARTUP
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 console.log("Started on " + Date());
+var The_Date = Fn_SetDate();
+setInterval(Fn_SetDate, 1000*60*60);
 
 var	amt_array = [
 		{
@@ -248,8 +250,9 @@ var AmToteSDL = new SDL_class("alf", "location");
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 
 
-var tail = new Tail("\\\\Tvgvprdds02\\tvg\\LogFiles\\MessageBroker_2016-01-25.log",{});
-console.log("listening to today's messagebroker");
+var filelocation = "\\\\Tvgvprdds02\\tvg\\LogFiles\\MessageBroker_" + The_Date + ".log"
+var tail = new Tail(filelocation,{});
+console.log("listening to today's messagebroker: " + filelocation);
 
 //for each new message
 tail.on("line", function(line) {
@@ -469,54 +472,6 @@ function getTracks() {
 
 
 
-function Fn_checkAMTsDateOLD() {
-	//var amt_array = ["tvgvpramt01","tvgvpramt02","tvgvpramt03","tvgvpramt04","tvgvpramt05","tvgvpramt06"]
-
-	var	amt_array = [
-		{
-		"name": "tvgvpramt01",
-		"date": ""
-		},
-		{
-		"name": "tvgvpramt02",
-		"date": ""
-		},
-		{
-		"name": "tvgvpramt03",
-		"date": ""
-		},
-		{
-		"name": "tvgvpramt04",
-		"date": ""
-		},
-		{
-		"name": "tvgvpramt05",
-		"date": ""
-		},
-		{
-		"name": "tvgvpramt06",
-		"date": ""
-		}
-	];
-	
-	//check the date on each sever
-	for (var i = amt_array.length - 1; i >= 0; i--) {
-		request('http://' + amt_array[i]["name"] +':80/TSG/api/session/date', amt_array[i]["date"] = function (error, response, body) {
-			  if (!error && response.statusCode == 200) {
-				//parse the response
-				var body_obj = JSON.parse(body);
-				console.log(body_obj.response);
-				return body_obj.response
-				// = body_obj.response //<<<<------ This doesn't work because no access to i inside the callback function?
-			} else {
-				//there was no reply
-			}
-		});
-	}
-
-	//fails as callback has not returned with answer yet
-}
-
 //SDL_CLASS
 function SDL_class(para_SystemName,para_Location) {
 this.name = para_SystemName;
@@ -555,6 +510,36 @@ function SlackPost(para_Message) {
 	},
 	});
 }
+
+
+
+function Fn_SetDate() {
+	var Datetime = require('machinepack-datetime');
+
+	// Convert a JS timestamp and timezone into a human readable date/time.
+	Datetime.format({
+	timezone: 'America/los_angeles',
+	formatString: 'YYYY-MM-DD', //2016-01-25
+	}).exec({
+	// An unexpected error occurred.
+	error: function (err){
+	},
+	// Unrecognized timezone.
+	unknownTimezone: function (){
+	},
+	// Could not build a date/time/zone from the provided timestamp.
+	invalidDatetime: function (){
+	},
+	// OK.
+	success: function (result){
+	The_Date = result;
+	console.log(result);
+	return result;
+	},
+	});
+}
+
+
 
 
 
