@@ -28,6 +28,11 @@ jsdom.env(
 var Promise = require('bluebird');
 	//request
 var request = require('request');
+	//Tail
+var Tail = require('tail-forever');
+	//Slack
+var Slack = require('machinepack-slack');
+
 	//Express
 var express = require('express');
 var	fs = require("fs"),
@@ -225,8 +230,8 @@ app.get('/api/:endpoint?', function(req, res){
 // HTTP
 //~~~~~~~~~~~~~~~~~~~~~
 
-app.listen(3000, function() {
-	console.log("The frontend server is running on port 3000");
+app.listen(80, function() {
+	console.log("The frontend server is running on port 80");
 });
 
 //--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
@@ -241,6 +246,169 @@ var AmToteSDL = new SDL_class("alf", "location");
 //--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 // Function Staging
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
+
+
+var tail = new Tail("\\\\Tvgvprdds02\\tvg\\LogFiles\\MessageBroker_2016-01-25.log",{});
+console.log("listening to today's messagebroker");
+
+//for each new message
+tail.on("line", function(line) {
+	var Message_Obj = MessageSeverityGutCheck(line);
+	//only display messages to the user if they are FATAL or SEVERE
+	if (Message_Obj.Severity === 1 || Message_Obj.Severity === 2) {
+		console.log(Message_Obj.Message);
+		SlackPost(Message_Obj.Message)
+	}
+});
+tail.on("error", function(error) {
+  console.log('ERROR with MessageBroker file: ', error);
+});
+
+
+//checks incomming messages against our list of severity
+function MessageSeverityGutCheck(para_Input) {
+	var Output_Obj = [];
+	Output_Obj.RawMessage = para_Input;
+
+	//1 - Fatal; sites are totally down or impacting some percentage of wagers
+	if (InStr(para_Input,"may have hung")) {
+		Output_Obj.Severity = 1;
+		Output_Obj.Message = "DataService needs to be checked";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Fatal"
+	}
+	if (InStr(para_Input,"Error getting account balance") || InStr(para_Input,"Window NoTote")) {
+		Output_Obj.Severity = 1;
+		Output_Obj.Message = "Tote windows are down";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RC+-33+error+message+on+DDS+TIP+down+procedures"
+	}
+
+	//2 - Severe; errors impact the customer and should be solved as soon as possible
+	if (InStr(para_Input,"Could not find server")) {
+		Output_Obj.Severity = 2;
+		Output_Obj.Message = "DBA issue";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RPC+server+is+unavailable"
+	}
+	if (InStr(para_Input,"RPC server is unavailable")) {
+		Output_Obj.Severity = 2;
+		Output_Obj.Message = "Restart the effected server";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RPC+server+is+unavailable"
+	}
+	if (InStr(para_Input,"Dialogic")) {
+		Output_Obj.Severity = 2;
+		Output_Obj.Message = "IVR has missing pool or other Dialogic error";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/IVR+Dialogic+Error"
+	}
+	
+	//3 - Warnings; require some action be taken at some point, but have little to no impact
+	if (InStr(para_Input,"Truncation errors")) {
+		Output_Obj.Severity = 3;
+		Output_Obj.Message = "please start the log service at your convenience";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/String+Data+Right+Truncation+errors+on+DDS"
+	}
+	if (InStr(para_Input,"Finisher data contains shared betting interest:")) {
+		Output_Obj.Severity = 3;
+		Output_Obj.Message = "Coupled Entry just placed in a race";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Warning"
+	}
+
+	//4 - Informational; totally normal operational messages
+	if (InStr(para_Input,"Payment type not bound")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "everything is good";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Update Race where")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "X track with Y abbreviation for Z day has an invalid time format";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Invalid+Time+Format+Error"
+	}
+	if (InStr(para_Input,"Error in Automated Bet Reviewer")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "???";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Results  are  final")) { //for some reason they had two spaces
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "Race just went official";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"unreconciled bets selected")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "BOP is working on reconciling bets";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Opening new account")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "new account created";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Creating tote account")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "Customers account was created at Tote";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"A horse was scratched")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "A horse was scratched";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"A horse was livened")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "A horse was livened";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"The race has closed")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "A race just closed";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Data has been parsed for Track")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "track is not available via Gatewayl; typically OK"; //might need more research on this one
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"now available via the SGRGateway")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "Track just became available over the SGRGateway";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Message Monitor")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "Someone has connected to the messagebroker with messagemonitor";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"ThreadStart()")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "a new thread entered from the DataCollector";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"alf")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "ALF";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+
+
+
+	//if this messagetype has never been encountered
+	if (Output_Obj.Severity === undefined) {
+		Output_Obj.Severity = 2;
+		Output_Obj.Message = "unhandled message type:" + Output_Obj.RawMessage;
+	}
+
+	//give back the Output_Obj
+	return Output_Obj;
+}
+
+function InStr(para_String, para_needle) {
+	var Output = para_String.indexOf(para_needle);
+	if (Output === -1) {
+		return 0
+	} else {
+		return 1
+	}
+}
+
 
 function checkSDL() {
 	//Loop all known SDLs and start re-reading the file
@@ -362,6 +530,31 @@ SDL_class.prototype.pull_file = function () {
 	console.log("tried to pull file and failed.");
 }
 
+
+function SlackPost(para_Message) {
+
+	Slack.postToChannel({
+	webhookUrl: '',
+	channel: '#messagebroker',
+	message: para_Message,
+	username: 'Gekkō',
+	iconEmoji: ':new_moon:',
+	linkNames: true,
+	}).exec({
+	// An unexpected error occurred.
+	error: function (err){
+		console.log("Slack Error:" + err);
+	},
+	// Specified subdomain and webhook token combination
+	notFound: function (){
+		console.log("Slack Error:" + err);
+	},
+	// OK.
+	success: function (){
+
+	},
+	});
+}
 
 
 

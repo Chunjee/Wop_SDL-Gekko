@@ -1394,6 +1394,7 @@ a.bg-danger:hover {
 }
 ul,
 ol {
+  list-style-type: none;
   margin-top: 0;
   margin-bottom: 10px;
 }
@@ -1401,6 +1402,7 @@ ul ul,
 ol ul,
 ul ol,
 ol ol {
+  list-style-type: none;
   margin-bottom: 0;
 }
 .list-unstyled {

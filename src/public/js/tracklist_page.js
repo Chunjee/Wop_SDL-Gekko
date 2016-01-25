@@ -25,7 +25,7 @@ $.get("/api/tracks", "", function(data) {
         .on( "click", function() {
 			console.log($(this).text());
 			//Show each race which is .hide() by default
-			$(this.children).toggle();
+			$(this.children).toggle("slow");
 		});
 
 
