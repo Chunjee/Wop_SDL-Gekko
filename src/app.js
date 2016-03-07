@@ -81,8 +81,17 @@ var	amt_array = [
 		"name": "tvgvpramt05",
 		"date": ""
 		},
+
 		{
 		"name": "tvgvpramt06",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt07",
+		"date": ""
+		},
+		{
+		"name": "tvgvpramt08",
 		"date": ""
 		}
 	];
@@ -250,7 +259,7 @@ var AmToteSDL = new SDL_class("alf", "location");
 //\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 
 
-var filelocation = "\\\\Tvgvprdds02\\tvg\\LogFiles\\MessageBroker_" + The_Date + ".log"
+var filelocation = "\\\\tvgvprdds02\\tvg\\LogFiles\\MessageBroker_" + "2016-03-06" + ".log"
 var tail = new Tail(filelocation,{});
 console.log("listening to today's messagebroker: " + filelocation);
 
@@ -260,11 +269,15 @@ tail.on("line", function(line) {
 	//only display messages to the user if they are FATAL or SEVERE
 	if (Message_Obj.Severity === 1 || Message_Obj.Severity === 2) {
 		console.log(Message_Obj.Message);
-		SlackPost(Message_Obj.Message)
+		SlackPost(Message_Obj.Message + ": " + Message_Obj.RawMessage);
+	}
+	if (Message_Obj.Severity === 3) {
+		console.log(Message_Obj.Message + ": " + Message_Obj.RawMessage);
 	}
 });
 tail.on("error", function(error) {
-  console.log('ERROR with MessageBroker file: ', error);
+  console.log('ERROR with MessageBroker file: ' + error, error);
+  tail
 });
 
 
@@ -289,7 +302,7 @@ function MessageSeverityGutCheck(para_Input) {
 	if (InStr(para_Input,"Could not find server")) {
 		Output_Obj.Severity = 2;
 		Output_Obj.Message = "DBA issue";
-		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RPC+server+is+unavailable"
+		Output_Obj.documentation = ""
 	}
 	if (InStr(para_Input,"RPC server is unavailable")) {
 		Output_Obj.Severity = 2;
@@ -385,9 +398,24 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.Message = "a new thread entered from the DataCollector";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
 	}
-	if (InStr(para_Input,"alf")) {
+	if (InStr(para_Input,"TMS starting up")) {
 		Output_Obj.Severity = 4;
-		Output_Obj.Message = "ALF";
+		Output_Obj.Message = "TMS is starting";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"Track Abbreviation not found")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "Track not found in"; //usually fine
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"The callback connection to")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "callback exception has ended";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
+	}
+	if (InStr(para_Input,"EINVALIDPIN")) {
+		Output_Obj.Severity = 4;
+		Output_Obj.Message = "User input wrong PIN";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational"
 	}
 
@@ -395,7 +423,7 @@ function MessageSeverityGutCheck(para_Input) {
 
 	//if this messagetype has never been encountered
 	if (Output_Obj.Severity === undefined) {
-		Output_Obj.Severity = 2;
+		Output_Obj.Severity = 3;
 		Output_Obj.Message = "unhandled message type:" + Output_Obj.RawMessage;
 	}
 
@@ -489,7 +517,7 @@ SDL_class.prototype.pull_file = function () {
 function SlackPost(para_Message) {
 
 	Slack.postToChannel({
-	webhookUrl: '',
+	webhookUrl: 'https://hooks.slack.com/services/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',
 	channel: '#messagebroker',
 	message: para_Message,
 	username: 'Gekkō',

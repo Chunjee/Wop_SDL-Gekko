@@ -46,3 +46,12 @@
     new WOW().init();
 
 })(jQuery); // End of use strict
+
+
+#paths-form input.success {
+            background: #dff0d8;
+        }
+
+        #paths-form input.failure {
+            background: #f2dede;
+        }
