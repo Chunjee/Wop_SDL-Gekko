@@ -10,6 +10,7 @@
     "jade": "^1.11.0",
     "machinepack-datetime": "^1.4.0",
     "machinepack-slack": "^1.0.1",
+    "moment": "^2.15.1",
     "q": "^1.4.1",
     "request": "^2.67.0",
     "tail-forever": "^0.3.11"
