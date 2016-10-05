@@ -289,27 +289,28 @@ function tailfile(para_date) {
 	//WARNING and INFORMATIONAL make sound depending on circumstance
 	//1-FATAL  2-SEVERE  3-WARNING  4-INFORMATIONAL  5-USELESS  0-NOT DEFINED
   	if (Message_Obj.Severity == 1) { //FATAL
-  		console.log(colors.red.underline(Message_Obj.Server + ": " + Message_Obj.Message));
-  		SlackPost(Message_Obj.Server + ": " + Message_Obj.Message);
+  		console.log(colors.red.underline(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
+  		SlackPost(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message);
 		fn_AudioAlert();
   	}
     if (Message_Obj.Severity == 2) { //SEVERE
-  		console.log(colors.red(Message_Obj.Server + ": " + Message_Obj.Message));
-  		SlackPost(Message_Obj.Server + ": " + Message_Obj.Message);
+  		console.log(colors.red(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
+  		SlackPost(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message);
 		fn_AudioAlert();
   	}
   	if (Message_Obj.Severity == 3) { //WARNING
-  		console.log(colors.yellow(Message_Obj.Message + ": " + Message_Obj.RawMessage));
+  		console.log(colors.yellow(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
 		fn_AudioAlert();
   	}
-	if (Message_Obj.Severity == 3) { //INFORMATIONAL
-  		console.log(colors.green(Message_Obj.Message + ": " + Message_Obj.RawMessage));
+	if (Message_Obj.Severity == 4) { //INFORMATIONAL
+  		console.log(colors.green(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
   	}
-	if (Message_Obj.Severity == 4) { //USELESS
+	if (Message_Obj.Severity == 5) { //USELESS
   		//Nothing
   	}
-    if (Message_Obj.Severity == 5) {
-  		console.log(colors.gray(Message_Obj.Message + ": " + Message_Obj.RawMessage));
+	//not sorted, research and catalog
+    if (Message_Obj.Severity == 0) {
+  		console.log(colors.gray(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
   	}
   });
   tail.on("error", function(error) {
@@ -319,35 +320,7 @@ function tailfile(para_date) {
 }
 
 
-function MessageSeverity(para_Input) {
-	//1-FATAL  2-SEVERE  3-WARNING  4-INFORMATIONAL  5-USELESS  0-NOT DEFINED
-	//[0]Index  [1]SERVER  [2]SERVICE  [3]DENVER-SEVERITY  [4]???BLANK???  [5]DATE TIME  [6]!CODE! [7]RAW-MESSAGE
-	var Output_Obj = [];
-	Output_Obj.Severity = 0;
 
-	var Message_array = fn_Splitfile(para_Input, "|");
-	Output_Obj.DenverCode = parseFloat(Message_array[6].replace(/ /g,''));
-
-	switch (message_l) {
-    case 1:
-        //day = "Monday";
-        break;
-	case 118:
-        //day = "Monday";
-        break;
-
-
-	//4 - Informational; totally normal operational messages
-	case 1111:
-		console.log("case 1111 encountered")
-        Output_Obj.Severity = 4
-        break;
-	} //end of switch
-
-
-	//Add documentation link if none was assigned
-	return Output_Obj;
-}
 
 
 
@@ -360,16 +333,28 @@ function MessageSeverityGutCheck(para_Input) {
 	Output_Obj.Severity = 0;
 	Output_Obj.RawMessage = para_Input;
 
+	//discard 
+
 	//Separate information out
-	var Message_array = fn_Splitfile(para_Input, "|");
-	Output_Obj.Index = parseFloat((Message_array[0].replace(/ /g,''));
-	Output_Obj.Server = (Message_array[1].replace(/ /g,'');
-	Output_Obj.Service = (Message_array[2].replace(/ /g,'');
-	Output_Obj.DenverSeverity = (Message_array[3].replace(/ /g,'');
-	//Output_Obj.??? = Message_array[4];
-	Output_Obj.DateString = Message_array[5];
-	Output_Obj.DenverCode = parseFloat(Message_array[6].replace(/ /g,''));
-	Output_Obj.Message = Message_array[7];
+	var Message_array = fn_Splitfile(para_Input + "|", "|");
+	if (Message_array.length == 9) {
+		Output_Obj.Index = parseFloat(Message_array[0].replace(/ /g,''));
+		console.log("-" + Message_array[1] + "-");
+		Output_Obj.Server = Message_array[1].replace(/ /g,'');
+		Output_Obj.Service = Message_array[2].replace(/ /g,'');
+		Output_Obj.DenverSeverity = Message_array[3].replace(/ /g,'');
+		//Output_Obj.??? = Message_array[4];
+		Output_Obj.DateString = Message_array[5];
+		Output_Obj.DenverCode = parseFloat(Message_array[6].replace(/ /g,''));
+		Output_Obj.Message = Message_array[7];
+	} else {
+		console.log(para_Input);
+		Output_Obj.Severity = 3;
+		Output_Obj.Server = "NONE";
+		Output_Obj.UserMessage = "Unhandled Error, does not follow normal error message formatting";
+		Output_Obj.Message = para_Input;
+		return Output_Obj;
+	}
 	
 
 	//1 - Fatal; sites are totally down or impacting some percentage of wagers
@@ -382,7 +367,7 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.UserMessage = "Tote Windows possibly down";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RC+-33+error+message+on+DDS+TIP+down+procedures";
 	}
-	if (Output_Obj.UserMessage.length()) {
+	if (Output_Obj.UserMessage) {
 		return Output_Obj;
 	}
 	//End of Fatal
@@ -394,21 +379,18 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.UserMessage = "DBA issue";
 		Output_Obj.documentation = "";
 	}
-	if (InStr(Output_Obj.Message,"RPC server is unavailable")) {
-		Output_Obj.UserMessage = "Restart the effected server";
-		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RPC+server+is+unavailable";
-	}
 	if (InStr(Output_Obj.Message,"Dialogic")) {
 		Output_Obj.UserMessage = "IVR has missing pool or other Dialogic error";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/IVR+Dialogic+Error";
 	}
-	if (Output_Obj.UserMessage.length()) {
+	if (Output_Obj.UserMessage) {
 		return Output_Obj;
 	}
 	//End of Severe
 
 
 	//3 - Warnings; require some action be taken at some point, but have little to no impact
+	//also things that if constantly repeatiung, should be looked at
 	Output_Obj.Severity = 3;
 	if (InStr(Output_Obj.Message,"Truncation errors")) {
 		Output_Obj.UserMessage = "please start the log service at your convenience";
@@ -422,7 +404,11 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.UserMessage = "Error getting account balance";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RC+-33+error+message+on+DDS+TIP+down+procedures";
 	}
-	if (Output_Obj.UserMessage.length()) {
+	if (InStr(Output_Obj.Message,"RPC server is unavailable")) {
+		Output_Obj.UserMessage = "Restart the effected server";
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RPC+server+is+unavailable";
+	}
+	if (Output_Obj.UserMessage) {
 		return Output_Obj;
 	}
 	//End of Warnings
@@ -430,7 +416,7 @@ function MessageSeverityGutCheck(para_Input) {
 
 	//4 - Informational; totally normal operational messages that might be interesting
 	Output_Obj.Severity = 4;
-	if (Output_Obj.UserMessage.length()) {
+	if (Output_Obj.UserMessage) {
 		return Output_Obj;
 	}
 	//End of Informational
@@ -518,7 +504,7 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.UserMessage = "something is reponding again";
 		Output_Obj.documentation = "The DatabaseQueue thread of [X]-DdsControl (Id = 8fc) is now responding.";
 	}
-	if (Output_Obj.UserMessage.length()) {
+	if (Output_Obj.UserMessage) {
 		return Output_Obj;
 	}
 	//End of Useless
@@ -527,19 +513,19 @@ function MessageSeverityGutCheck(para_Input) {
 
   //----------------------TEMP----------------------
   //These errors CAN indicate a problem but occur with such frequency that is is hard to detimine if an actual issue is occuring
-  if (InStr(para_Input,"Communication failure for track")) {
+  if (InStr(Output_Obj.Message,"Communication failure for track")) {
 		Output_Obj.UserMessage = "TEMP";
 		Output_Obj.documentation = "TEMP";
 	}
-  if (InStr(para_Input,"a DdsEvents callback system has been created on")) {
+  if (InStr(Output_Obj.Message,"a DdsEvents callback system has been created on")) {
 		Output_Obj.UserMessage = "TEMP";
 		Output_Obj.documentation = "TEMP";
 	}
-  if (InStr(para_Input,"The remote procedure call failed")) {
+  if (InStr(Output_Obj.Message,"The remote procedure call failed")) {
 		Output_Obj.UserMessage = "TEMP";
 		Output_Obj.documentation = "TEMP";
 	}
-  if (InStr(para_Input,"is not responding")) {
+  if (InStr(Output_Obj.Message,"is not responding")) {
 		Output_Obj.UserMessage = "TEMP";
 		Output_Obj.documentation = "TEMP";
 	}
@@ -548,17 +534,42 @@ function MessageSeverityGutCheck(para_Input) {
 
 
 	//if this messagetype has never been encountered
-	if (Output_Obj.UserMessage.length()) {
+	if (Output_Obj.UserMessage) {
 		Output_Obj.Severity = 5;
 		Output_Obj.Message = "unhandled message type:" + Output_Obj.RawMessage;
 	}
 	//Append documentation if missing
-	if (!Output_Obj.documentation.length()) {
+	if (!Output_Obj.documentation) {
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational";
 	}
 	//give back the Output_Obj
 	return Output_Obj;
+} //End of GutCheck
+
+
+function MessageSeverity(para_Input) {
+	//This concept failed because Denver did not differenciate different error codes
+	//Sample: SendMsg(2, Warning, "Exception caught in CSGRTransaction::GetSessionNumber() location: %s", location);
+	//[0]Index  [1]SERVER  [2]SERVICE  [3]DENVER-SEVERITY  [4]???BLANK???  [5]DATE TIME  [6]!CODE! [7]RAW-MESSAGE
+	var Message_array = fn_Splitfile(para_Input, "|");
+	Output_Obj.DenverCode = parseFloat(Message_array[6].replace(/ /g,''));
+	/*
+	switch (message_l) {
+    case 1:
+        //day = "Monday";
+        break;
+	case 118:
+        //day = "Monday";
+        break;
+	//4 - Informational; totally normal operational messages
+	case 1111:
+		console.log("case 1111 encountered")
+        break;
+	} //end of switch
+	*/
+	return Output_Obj;
 }
+
 
 function fn_Splitfile(para_input, para_delimiter) {
   //takes a string, returns array separated by para_delimiter
@@ -566,6 +577,7 @@ function fn_Splitfile(para_input, para_delimiter) {
   var res = para_input.split(para_delimiter);
   return res;
 };
+
 
 function InStr(para_String, para_needle) {
 	var Output = para_String.indexOf(para_needle);
