@@ -274,7 +274,7 @@ var AmToteSDL = new SDL_class("alf", "location");
 var datestring = moment().format('YYYY-MM-DD');
 tailfile(moment().format('YYYY-MM-DD'));
 //tailfile("2016-10-03");
-fn_AudioAlert();
+fn_AudioAlert("sobeautiful.mp3");
 
 
 function tailfile(para_date) {
@@ -339,7 +339,6 @@ function MessageSeverityGutCheck(para_Input) {
 	var Message_array = fn_Splitfile(para_Input + "|", "|");
 	if (Message_array.length == 9) {
 		Output_Obj.Index = parseFloat(Message_array[0].replace(/ /g,''));
-		console.log("-" + Message_array[1] + "-");
 		Output_Obj.Server = Message_array[1].replace(/ /g,'');
 		Output_Obj.Service = Message_array[2].replace(/ /g,'');
 		Output_Obj.DenverSeverity = Message_array[3].replace(/ /g,'');
@@ -349,13 +348,15 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.Message = Message_array[7];
 	} else {
 		console.log(para_Input);
-		Output_Obj.Severity = 3;
+		Output_Obj.Severity = 0;
 		Output_Obj.Server = "NONE";
 		Output_Obj.UserMessage = "Unhandled Error, does not follow normal error message formatting";
 		Output_Obj.Message = para_Input;
 		return Output_Obj;
 	}
 	
+	//Start with default documentation
+	Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational";
 
 	//1 - Fatal; sites are totally down or impacting some percentage of wagers
 	Output_Obj.Severity = 1;
@@ -377,11 +378,13 @@ function MessageSeverityGutCheck(para_Input) {
 	Output_Obj.Severity = 2;
 	if (InStr(Output_Obj.Message,"Could not find server")) {
 		Output_Obj.UserMessage = "DBA issue";
-		Output_Obj.documentation = "";
 	}
 	if (InStr(Output_Obj.Message,"Dialogic")) {
 		Output_Obj.UserMessage = "IVR has missing pool or other Dialogic error";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/IVR+Dialogic+Error";
+	}
+	if (InStr(Output_Obj.Message,"Communications failures")) {
+		Output_Obj.UserMessage = "Communications failures exceed WindowNotToteLimit, Tote might be down";
 	}
 	if (Output_Obj.UserMessage) {
 		return Output_Obj;
@@ -390,7 +393,7 @@ function MessageSeverityGutCheck(para_Input) {
 
 
 	//3 - Warnings; require some action be taken at some point, but have little to no impact
-	//also things that if constantly repeatiung, should be looked at
+	//also things that if constantly repeating, should be looked at
 	Output_Obj.Severity = 3;
 	if (InStr(Output_Obj.Message,"Truncation errors")) {
 		Output_Obj.UserMessage = "please start the log service at your convenience";
@@ -399,6 +402,7 @@ function MessageSeverityGutCheck(para_Input) {
 	if (InStr(Output_Obj.Message,"Finisher data contains shared betting interest:")) {
 		Output_Obj.UserMessage = "Coupled Entry just placed in a race";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Warning";
+		fn_AudioAlert("couple-sandwiches.wav");
 	}
 	if (InStr(Output_Obj.Message,"Error getting account balance")) {
 		Output_Obj.UserMessage = "Error getting account balance";
@@ -416,6 +420,9 @@ function MessageSeverityGutCheck(para_Input) {
 
 	//4 - Informational; totally normal operational messages that might be interesting
 	Output_Obj.Severity = 4;
+	if (InStr(Output_Obj.Message,"Betting Intrest")) {
+		Output_Obj.UserMessage = "Coupled Entry Finisher" + Output_Obj.Message;
+	}
 	if (Output_Obj.UserMessage) {
 		return Output_Obj;
 	}
@@ -531,16 +538,10 @@ function MessageSeverityGutCheck(para_Input) {
 	}
 
 
-
-
 	//if this messagetype has never been encountered
 	if (Output_Obj.UserMessage) {
 		Output_Obj.Severity = 5;
 		Output_Obj.Message = "unhandled message type:" + Output_Obj.RawMessage;
-	}
-	//Append documentation if missing
-	if (!Output_Obj.documentation) {
-		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational";
 	}
 	//give back the Output_Obj
 	return Output_Obj;
@@ -589,10 +590,13 @@ function InStr(para_String, para_needle) {
 }
 
 
-function fn_AudioAlert(para_Input) {
+function fn_AudioAlert(para_Input = false) {
 var player = new MPlayer();
-player.openFile('./alert.wav');
-	//player.play(para_Input);
+	if (para_Input == false) {
+		player.openFile("./src/sounds/alarm.wav");
+	} else {
+		player.openFile("./src/sounds/"+ para_Input);
+	}
 }
 
 
