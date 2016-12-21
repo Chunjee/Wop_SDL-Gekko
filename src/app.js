@@ -288,29 +288,36 @@ function tailfile(para_date) {
   	//only send messages to the slack if they are FATAL or SEVERE
 	//WARNING and INFORMATIONAL make sound depending on circumstance
 	//1-FATAL  2-SEVERE  3-WARNING  4-INFORMATIONAL  5-USELESS  0-NOT DEFINED
+
+
   	if (Message_Obj.Severity == 1) { //FATAL
-  		console.log(colors.red.underline(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
+		//Sound and color red with underline
+  		console.log(colors.red.underline(fn_BuildConsoleMessage(Message_Obj)));
   		SlackPost(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message);
 		fn_AudioAlert();
   	}
     if (Message_Obj.Severity == 2) { //SEVERE
-  		console.log(colors.red(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
+		//Sound and color red
+  		console.log(colors.red(fn_BuildConsoleMessage(Message_Obj)));
   		SlackPost(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message);
 		fn_AudioAlert();
   	}
   	if (Message_Obj.Severity == 3) { //WARNING
-  		console.log(colors.yellow(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
-		fn_AudioAlert();
+		//No Sound but color yellow
+  		console.log(colors.yellow(fn_BuildConsoleMessage(Message_Obj)));
+		
   	}
 	if (Message_Obj.Severity == 4) { //INFORMATIONAL
-  		console.log(colors.green(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
+		//No Sound but color green
+  		console.log(colors.green(fn_BuildConsoleMessage(Message_Obj)));
   	}
 	if (Message_Obj.Severity == 5) { //USELESS
-  		//Nothing
+  		//Show nothing
   	}
 	//not sorted, research and catalog
     if (Message_Obj.Severity == 0) {
-  		console.log(colors.gray(Message_Obj.Server + "-" + Message_Obj.Service + ": " + Message_Obj.Message));
+		//color gray
+  		console.log(colors.gray(fn_BuildConsoleMessage(Message_Obj)));
   	}
   });
   tail.on("error", function(error) {
@@ -320,7 +327,11 @@ function tailfile(para_date) {
 }
 
 
-
+function fn_BuildConsoleMessage(Message_Obj) {
+//Builds a standard console log message from Message_Obj
+	var datestring = moment().format('LTS');
+	return moment().format('LTS') +" "+ Message_Obj.Server +"("+ Message_Obj.Service +"): "+ Message_Obj.Message;
+}
 
 
 
@@ -399,11 +410,6 @@ function MessageSeverityGutCheck(para_Input) {
 		Output_Obj.UserMessage = "please start the log service at your convenience";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/String+Data+Right+Truncation+errors+on+DDS";
 	}
-	if (InStr(Output_Obj.Message,"Finisher data contains shared betting interest:")) {
-		Output_Obj.UserMessage = "Coupled Entry just placed in a race";
-		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Warning";
-		fn_AudioAlert("couple-sandwiches.wav");
-	}
 	if (InStr(Output_Obj.Message,"Error getting account balance")) {
 		Output_Obj.UserMessage = "Error getting account balance";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RC+-33+error+message+on+DDS+TIP+down+procedures";
@@ -411,6 +417,10 @@ function MessageSeverityGutCheck(para_Input) {
 	if (InStr(Output_Obj.Message,"RPC server is unavailable")) {
 		Output_Obj.UserMessage = "Restart the effected server";
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/RPC+server+is+unavailable";
+	}
+	if (InStr(Output_Obj.Message,"Track Abbreviation not found")) {
+		Output_Obj.UserMessage = "Track not found in"; //usually fine
+		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational";
 	}
 	if (Output_Obj.UserMessage) {
 		return Output_Obj;
@@ -420,8 +430,9 @@ function MessageSeverityGutCheck(para_Input) {
 
 	//4 - Informational; totally normal operational messages that might be interesting
 	Output_Obj.Severity = 4;
-	if (InStr(Output_Obj.Message,"Betting Intrest")) {
-		Output_Obj.UserMessage = "Coupled Entry Finisher" + Output_Obj.Message;
+	if (InStr(Output_Obj.Message,"Finisher data contains shared betting interest:")) {
+		Output_Obj.UserMessage = "Coupled Entry just placed in a race";
+		fn_AudioAlert("couple-sandwiches.wav");
 	}
 	if (Output_Obj.UserMessage) {
 		return Output_Obj;
@@ -493,10 +504,6 @@ function MessageSeverityGutCheck(para_Input) {
 	}
 	if (InStr(Output_Obj.Message,"TMS starting up")) {
 		Output_Obj.UserMessage = "TMS is starting";
-		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational";
-	}
-	if (InStr(Output_Obj.Message,"Track Abbreviation not found")) {
-		Output_Obj.UserMessage = "Track not found in"; //usually fine
 		Output_Obj.documentation = "http://confluence.tvg.com/display/wog/Index+of+Message+Monitor+Errors#IndexofMessageMonitorErrors-Informational";
 	}
 	if (InStr(Output_Obj.Message,"The callback connection to")) {
